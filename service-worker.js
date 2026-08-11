@@ -1,5 +1,5 @@
 
-const CACHE = "new-year-key-v3";
+const CACHE = "new-year-key-v5";
 const ASSETS = [
   "./",
   "./index.html",

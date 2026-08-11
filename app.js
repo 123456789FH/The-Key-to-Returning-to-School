@@ -18,6 +18,14 @@
     message: "رسالتي لنفسي"
   };
 
+  const keySegments = {
+    goal:    { left:"36.2%", top:"34.0%", width:"27.6%", height:"8.0%", color:"42,140,255" },
+    learn:   { left:"35.8%", top:"41.5%", width:"28.4%", height:"7.9%", color:"24,210,224" },
+    change:  { left:"35.3%", top:"48.9%", width:"29.4%", height:"7.8%", color:"104,205,41" },
+    impact:  { left:"34.9%", top:"56.2%", width:"30.2%", height:"7.5%", color:"255,171,20" },
+    message: { left:"35.3%", top:"63.2%", width:"29.4%", height:"6.3%", color:"72,108,240" }
+  };
+
   const defaultState = {
     name: "",
     goal: { text:"", why:"", step1:"", step2:"", step3:"" },
@@ -109,6 +117,111 @@
     setTimeout(()=>r.remove(), 1900);
   }
 
+
+  function schoolLight(duration=2200) {
+    const s = document.createElement("div");
+    s.className = "school-glow";
+    fx.appendChild(s);
+    setTimeout(() => s.remove(), duration + 150);
+  }
+
+  function keyAura(duration=3200) {
+    const a = document.createElement("div");
+    a.className = "key-aura";
+    fx.appendChild(a);
+    setTimeout(() => a.remove(), duration + 150);
+  }
+
+  function renderKeyProgress() {
+    Object.entries(keySegments).forEach(([section, g]) => {
+      const glow = document.createElement("div");
+      glow.className = "segment-glow" + (state.completed[section] ? " is-on" : "");
+      glow.dataset.segment = section;
+      glow.style.left = g.left;
+      glow.style.top = g.top;
+      glow.style.width = g.width;
+      glow.style.height = g.height;
+      glow.style.setProperty("--seg", g.color);
+      root.appendChild(glow);
+    });
+  }
+
+  function showProfileMenu() {
+    const old = root.querySelector(".profile-panel");
+    if (old) { old.remove(); return; }
+    const panel = document.createElement("div");
+    panel.className = "profile-panel";
+    panel.innerHTML = `
+      <button class="profile-close" type="button" aria-label="إغلاق">×</button>
+      <h2>بيانات الرحلة</h2>
+      <label for="profileName">اسم الطالبة</label>
+      <input id="profileName" maxlength="40" value="${escapeHtml(state.name || "")}">
+      <div class="profile-actions">
+        <button type="button" class="profile-save">حفظ الاسم</button>
+        <button type="button" class="profile-reset">بدء رحلة جديدة</button>
+      </div>`;
+    root.appendChild(panel);
+    const close = () => panel.remove();
+    panel.querySelector(".profile-close").addEventListener("click", close);
+    panel.querySelector(".profile-save").addEventListener("click", () => {
+      const n = panel.querySelector("#profileName").value.trim();
+      if (!n) { toastMsg("اكتبي اسم الطالبة أولًا"); return; }
+      state.name = n; studentName.value = n; save(); chime("complete");
+      toastMsg("تم تحديث اسم الطالبة ✨"); close();
+    });
+    panel.querySelector(".profile-reset").addEventListener("click", () => {
+      if (!confirm("هل تريدين بدء رحلة جديدة؟ سيتم مسح إجابات وإنجازات الطالبة الحالية.")) return;
+      state = structuredClone(defaultState);
+      localStorage.removeItem("newYearKeyState");
+      studentName.value = "";
+      close();
+      showArt("home");
+      welcome.classList.remove("is-hidden");
+      toastMsg("بدأت رحلة جديدة 🔑");
+    });
+  }
+
+  function renderHomeTools() {
+    const tools = document.createElement("div");
+    tools.className = "home-tools";
+    tools.innerHTML = `
+      <button type="button" class="home-tool install-tool" aria-label="تثبيت التطبيق"><span>⇩</span><small>تثبيت</small></button>
+      <button type="button" class="home-tool profile-tool" aria-label="بيانات الطالبة"><span>👤</span><small>الطالبة</small></button>`;
+    tools.querySelector(".install-tool").addEventListener("click", () => { chime(); installApp(); });
+    tools.querySelector(".profile-tool").addEventListener("click", () => { chime(); showProfileMenu(); });
+    root.appendChild(tools);
+  }
+
+  function showCelebrationCard() {
+    const card = document.createElement("div");
+    card.className = "celebration-card";
+    card.innerHTML = `
+      <div class="celebration-icon">🔑✨</div>
+      <h2>اكتمل مفتاح عامك الجديد!</h2>
+      <p>${escapeHtml(state.name || "أحسنتِ")}، أتممتِ المحطات الخمس. ابدئي رحلتك بثقة، واجعلي هدفك وعلمك وأثرك نورًا لطريقك.</p>
+      <div class="celebration-actions">
+        <button type="button" class="celebration-cert">شهادة الإنجاز 🏆</button>
+        <button type="button" class="celebration-summary">ملخص رحلتي</button>
+      </div>`;
+    root.appendChild(card);
+    card.querySelector(".celebration-cert").addEventListener("click", () => { chime("complete"); showCertificate(); });
+    card.querySelector(".celebration-summary").addEventListener("click", () => { chime(); showSummary(); });
+  }
+
+  function runFinalCelebration() {
+    showArt("home");
+    stage.classList.add("celebrating");
+    keyAura(4200);
+    journeyLight();
+    setTimeout(() => schoolLight(2500), 650);
+    [42, 50, 58].forEach((y, i) => setTimeout(() => sparkBurst(50, y), i * 420));
+    setTimeout(() => chime("complete"), 750);
+    setTimeout(() => {
+      stage.classList.remove("celebrating");
+      showCelebrationCard();
+    }, 2450);
+  }
+
   function makeButton(cls, label, style, onClick) {
     const b = document.createElement("button");
     b.type = "button";
@@ -162,14 +275,15 @@
     save();
     chime("complete");
     sparkBurst(50,58);
-    toastMsg("تم حفظ المحطة وإضاءتها ✨");
+    toastMsg("تم حفظ المحطة وإضاءة جزء من المفتاح ✨");
     setTimeout(() => {
-      if (next === "summary") showSummary();
+      if (next === "summary") runFinalCelebration();
       else showArt(next);
-    }, 420);
+    }, 560);
   }
 
   function renderHome() {
+    renderKeyProgress();
     const cards = [
       ["goal","هدفي","3.5%","66.3%","18.2%","19.5%"],
       ["learn","سأتعلم","22.1%","66.3%","18.5%","19.5%"],
@@ -191,11 +305,9 @@
     ].forEach(([target,left,top,width,height]) =>
       makeButton("hotspot", `فتح ${titles[target]}`, {left,top,width,height}, () => showArt(target))
     );
-    // Profile/footer hotspot lets the user change the name.
-    makeButton("hotspot","تغيير اسم الطالبة",{left:"78%",top:"91%",width:"20%",height:"7%"},()=>{
-      studentName.value = state.name;
-      welcome.classList.remove("is-hidden");
-    });
+    // The visible user icon in the footer also opens the student controls.
+    makeButton("hotspot","بيانات الطالبة",{left:"78%",top:"91%",width:"20%",height:"7%"},showProfileMenu);
+    renderHomeTools();
   }
 
   function renderGoal() {
@@ -411,6 +523,7 @@
     save();
     welcome.classList.add("is-hidden");
     journeyLight();
+    setTimeout(() => schoolLight(2100), 450);
     chime("complete");
     setTimeout(()=>toastMsg(`أهلًا ${n} 🌟`), 300);
   });
@@ -427,6 +540,11 @@
   renderOverlay();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
+    window.addEventListener("load", async () => {
+      try {
+        const reg = await navigator.serviceWorker.register("./service-worker.js", { updateViaCache:"none" });
+        reg.update().catch(()=>{});
+      } catch {}
+    });
   }
 })();
